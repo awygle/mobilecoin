@@ -18,7 +18,8 @@ permissions:
 
 jobs:
   mc-tests:
-    runs-on: ubuntu-latest
+    runs-on: [self-hosted, Linux, large]
+    container: mobilecoin/rust-sgx-base:latest
 
     strategy:
       matrix:
@@ -49,7 +50,8 @@ jobs:
           junit_xml_filename: junit-mc-tests-${{matrix.runner_index}}.xml
 
   consensus-tests:
-    runs-on: ubuntu-latest
+    runs-on: [self-hosted, Linux, large]
+    container: mobilecoin/rust-sgx-base:latest
 
     strategy:
       matrix:
@@ -79,7 +81,8 @@ jobs:
           junit_xml_filename: junit-consensus-tests-${{matrix.runner_index}}.xml
 
   fog-tests:
-    runs-on: ubuntu-latest
+    runs-on: [self-hosted, Linux, large]
+    container: mobilecoin/rust-sgx-base:latest
 
     strategy:
       matrix:
@@ -128,7 +131,9 @@ jobs:
           - 5432:5432
 
   fog-ingest-tests:
-    runs-on: ubuntu-latest
+    runs-on: [self-hosted, Linux, large]
+    container: mobilecoin/rust-sgx-base:latest
+
     steps:
       - name: Check out code
         uses: actions/checkout@v3
@@ -159,7 +164,9 @@ jobs:
           - 5432:5432
 
   fog-conformance-tests:
-    runs-on: ubuntu-latest
+    runs-on: [self-hosted, Linux, large]
+    container: mobilecoin/rust-sgx-base:latest
+
     steps:
       - name: Check out code
         uses: actions/checkout@v3
@@ -216,7 +223,9 @@ jobs:
           - 5432:5432
 
   fog-local-network-tests:
-    runs-on: ubuntu-latest
+    runs-on: [self-hosted, Linux, large]
+    container: mobilecoin/rust-sgx-base:latest
+
     steps:
       - name: Check out code
         uses: actions/checkout@v3
@@ -327,7 +336,7 @@ jobs:
           - 5432:5432
 
   publish-test-results:
-    runs-on: ubuntu-latest
+    runs-on: [self-hosted, Linux, small]
     if: success() || failure()
     needs:
       - mc-tests
