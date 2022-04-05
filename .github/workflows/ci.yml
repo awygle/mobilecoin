@@ -19,51 +19,97 @@ permissions:
 jobs:
   mc-tests:
     runs-on: ubuntu-latest
+
+    strategy:
+      matrix:
+        num_runners: [2]
+        runner_index: [0, 1]
+      # Run each shard to completion.
+      fail-fast: false
+    env:
+      NUM_RUNNERS: ${{ matrix.num_runners }}
+      RUNNER_INDEX: ${{ matrix.runner_index }}
+
     steps:
       - name: Check out code
         uses: actions/checkout@v3
       - name: Setup Rust
         uses: ./.github/actions/setup-rust
       - name: List packages to test
-        run: cargo test -p 2>&1 | grep mc- | grep -v -e mc-fog -e mc-consensus | tee /tmp/mc-test-packages
+        run: |
+          cargo test -p 2>&1 | \
+            grep mc- | \
+            grep -v -e mc-fog -e mc-consensus | \
+            awk "NR % $NUM_RUNNERS == $RUNNER_INDEX { print \"-p \" \$1 }" | \
+            tee /tmp/mc-test-packages
       - name: Run tests
         uses: ./.github/actions/run-mc-tests
         with:
-          args: $(awk '{ print "-p " $1 }' /tmp/mc-test-packages)
-          junit_xml_filename: junit-mc-tests.xml
+          args: $(cat /tmp/mc-test-packages)
+          junit_xml_filename: junit-mc-tests-${{matrix.runner_index}}.xml
 
   consensus-tests:
     runs-on: ubuntu-latest
+
+    strategy:
+      matrix:
+        num_runners: [2]
+        runner_index: [0, 1]
+      # Run each shard to completion.
+      fail-fast: false
+    env:
+      NUM_RUNNERS: ${{ matrix.num_runners }}
+      RUNNER_INDEX: ${{ matrix.runner_index }}
+
     steps:
       - name: Check out code
         uses: actions/checkout@v3
       - name: Setup Rust
         uses: ./.github/actions/setup-rust
       - name: List packages to test
-        run: cargo test -p 2>&1 | grep mc-consensus | tee /tmp/mc-test-packages
+        run: |
+          cargo test -p 2>&1 | \
+            grep mc-consensus | \
+            awk "NR % $NUM_RUNNERS == $RUNNER_INDEX { print \"-p \" \$1 }" | \
+            tee /tmp/consensus-test-packages
       - name: Run tests
         uses: ./.github/actions/run-mc-tests
         with:
-          args: $(awk '{ print "-p " $1 }' /tmp/mc-test-packages)
-          junit_xml_filename: junit-consensus-tests.xml
+          args: $(cat /tmp/consensus-test-packages)
+          junit_xml_filename: junit-consensus-tests-${{matrix.runner_index}}.xml
 
   fog-tests:
     runs-on: ubuntu-latest
+
+    strategy:
+      matrix:
+        num_runners: [2]
+        runner_index: [0, 1]
+      # Run each shard to completion.
+      fail-fast: false
+    env:
+      NUM_RUNNERS: ${{ matrix.num_runners }}
+      RUNNER_INDEX: ${{ matrix.runner_index }}
+      DATABASE_URL: "postgres://postgres:postgres@postgres"
+      TEST_DATABASE_URL: "postgres://postgres:postgres@postgres"
+
     steps:
       - name: Check out code
         uses: actions/checkout@v3
       - name: Setup Rust
         uses: ./.github/actions/setup-rust
       - name: List packages to test
-        run: cargo test -p 2>&1 | grep mc-fog | grep -v mc-fog-ingest | tee /tmp/mc-test-packages
+        run: |
+          cargo test -p 2>&1 | \
+            grep mc-fog | \
+            grep -v mc-fog-ingest | \
+            awk "NR % $NUM_RUNNERS == $RUNNER_INDEX { print \"-p \" \$1 }" | \
+            tee /tmp/fog-test-packages
       - name: Run tests
         uses: ./.github/actions/run-mc-tests
         with:
-          args: $(awk '{ print "-p " $1 }' /tmp/mc-test-packages) --release
-          junit_xml_filename: junit-fog-tests.xml
-    env:
-      DATABASE_URL: "postgres://postgres:postgres@postgres"
-      TEST_DATABASE_URL: "postgres://postgres:postgres@postgres"
+          args: $(cat /tmp/fog-test-packages)
+          junit_xml_filename: junit-fog-tests-${{matrix.runner_index}}.xml
 
     services:
       # Spin up a PostgreSQL server
