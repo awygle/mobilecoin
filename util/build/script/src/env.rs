@@ -226,7 +226,14 @@ impl Environment {
         let profile_target_dir = out_dir
             .as_path()
             .ancestors()
-            .find(|path| path.ends_with(&target) || path.ends_with(&profile))
+            .find(|path| {
+                path.ends_with(&target)
+                    || path.ends_with(&profile)
+                    || path
+                        .parent()
+                        .map(|parent| parent.ends_with("target"))
+                        .unwrap_or_default()
+            })
             .ok_or_else(|| EnvironmentError::OutDir(out_dir.clone()))?
             .to_owned();
         let target_dir = profile_target_dir
