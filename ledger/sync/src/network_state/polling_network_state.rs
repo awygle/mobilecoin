@@ -68,10 +68,20 @@ impl<BC: BlockchainConnection + 'static> PollingNetworkState<BC> {
         let results_and_condvar = Arc::new((Mutex::new(ResultsMap::default()), Condvar::new()));
 
         for conn in self.manager.conns() {
-            let responder_id = conn
-                .uri()
-                .responder_id()
-                .expect("Could not get responder_id from URI");
+            // Create a new ResponderId out of the uri's host and port. This allows us to
+            // distinguish between individual nodes that share the same "canonical"
+            // ResponderId.
+            //
+            // Note: this is a hack that allows us to  use a ResponderId in the way that
+            // we'd use a NodeID. While it'd be better to change SCPNetworkState
+            // to use NodeID, this is a huge undertaking due to tech debt.
+            let connection_uri = conn.uri();
+            let host_and_port = format!("{}:{}", connection_uri.host(), connection_uri.port());
+            let responder_id = ResponderId::from_str(&host_and_port).unwrap_or_else(|_| {
+                connection_uri
+                    .responder_id()
+                    .expect("Couldn't get ResponderId.")
+            });
 
             let thread_logger = self.logger.clone();
             let thread_results_and_condvar = results_and_condvar.clone();
