@@ -33,12 +33,15 @@ class FogNetwork(Network):
         ]))
 
     def start(self):
-        cmd = ' && '.join([
-            f'dropdb --if-exists {FOG_SQL_DATABASE_NAME}',
-            f'createdb {FOG_SQL_DATABASE_NAME}',
-            f'DATABASE_URL=postgres://localhost/{FOG_SQL_DATABASE_NAME} {PROJECT_DIR}/{TARGET_DIR}/fog-sql-recovery-db-migrations',
-        ])
-        print(f'Creating postgres database: {cmd}')
+        if 'DATABASE_URL' in os.environ:
+            cmd = f'{PROJECT_DIR}/{TARGET_DIR}/fog-sql-recovery-db-migrations'
+        else:
+            cmd = ' && '.join([
+                f'dropdb --if-exists {FOG_SQL_DATABASE_NAME}',
+                f'createdb {FOG_SQL_DATABASE_NAME}',
+                f'DATABASE_URL=postgres://localhost/{FOG_SQL_DATABASE_NAME} {PROJECT_DIR}/{TARGET_DIR}/fog-sql-recovery-db-migrations',
+            ])
+            print(f'Creating postgres database: {cmd}')
         subprocess.check_output(cmd, shell=True)
 
         print("Starting network...")

@@ -5,7 +5,7 @@
 use crate::{SqlRecoveryDb, SqlRecoveryDbConnectionConfig};
 use diesel::{prelude::*, PgConnection};
 use diesel_migrations::embed_migrations;
-use mc_common::logger::Logger;
+use mc_common::logger::{log, Logger};
 use rand::{distributions::Alphanumeric, thread_rng, Rng};
 
 embed_migrations!("migrations/");
@@ -34,6 +34,7 @@ impl SqlRecoveryDbTestContext {
         // First, connect to postgres db to be able to create our test
         // database.
         let postgres_url = format!("{}/postgres", base_url);
+        log::info!(&logger, "Connecting to root PG DB {}", postgres_url);
         let conn =
             PgConnection::establish(&postgres_url).expect("Cannot connect to postgres database.");
 
@@ -44,7 +45,9 @@ impl SqlRecoveryDbTestContext {
             .unwrap_or_else(|err| panic!("Could not create database {}: {:?}", db_name, err));
 
         // Now we can connect to the database and run the migrations
-        let conn = PgConnection::establish(&format!("{}/{}", base_url, db_name))
+        let db_url = format!("{}/{}", base_url, db_name);
+        log::info!(&logger, "Connecting to newly created PG DB {}", db_url);
+        let conn = PgConnection::establish(&db_url)
             .unwrap_or_else(|err| panic!("Cannot connect to {} database: {:?}", db_name, err));
 
         embedded_migrations::run(&conn).expect("failed running migrations");

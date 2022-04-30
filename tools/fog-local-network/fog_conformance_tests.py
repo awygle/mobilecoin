@@ -439,12 +439,15 @@ class FogConformanceTest:
         ledger2 = self.make_ledger('ledger2')
 
         # Create fog SQL db
-        cmd = ' && '.join([
-            f'dropdb --if-exists {FOG_SQL_DATABASE_NAME}',
-            f'createdb {FOG_SQL_DATABASE_NAME}',
-            f'DATABASE_URL=postgres://localhost/{FOG_SQL_DATABASE_NAME} {self.target_dir}/fog-sql-recovery-db-migrations',
-        ])
-        print(f'Creating postgres database: {cmd}')
+        if 'DATABASE_URL' in os.environ:
+            cmd = f'{self.target_dir}/fog-sql-recovery-db-migrations',
+        else:
+            cmd = ' && '.join([
+                f'dropdb --if-exists {FOG_SQL_DATABASE_NAME}',
+                f'createdb {FOG_SQL_DATABASE_NAME}',
+                f'DATABASE_URL=postgres://localhost/{FOG_SQL_DATABASE_NAME} {self.target_dir}/fog-sql-recovery-db-migrations',
+            ])
+            print(f'Creating postgres database: {cmd}')
         subprocess.check_output(cmd, shell=True)
 
         # Start the rust remote wallet, unless the user requested not to

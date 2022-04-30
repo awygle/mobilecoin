@@ -14,6 +14,7 @@ embed_migrations!("migrations/");
 
 fn main() {
     let database_url = env::var("DATABASE_URL").expect("Missing DATABASE_URL environment variable");
+    println!("Got DATABASE_URL={}", database_url);
 
     let conn = PgConnection::establish(&database_url).expect("Cannot connect to database");
 
