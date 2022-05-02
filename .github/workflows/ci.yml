@@ -43,6 +43,11 @@ jobs:
             grep -v -e mc-fog -e mc-consensus | \
             awk "NR % $NUM_RUNNERS == $RUNNER_INDEX { print \"-p \" \$1 }" | \
             tee /tmp/mc-test-packages
+          # Hack: mc-util-sample-ledger needs mc-util-keyfile bins.
+          # TODO: Replace with artifact deps when that does not require
+          # additional cargo flags.
+          grep -q generate-sample-ledger /tmp/mc-test-packages && \
+            echo '-p mc-util-keyfile' >> /tmp/mc-test-packages || true
       - name: Run tests
         uses: ./.github/actions/run-mc-tests
         with:
@@ -108,6 +113,12 @@ jobs:
             grep -v mc-fog-ingest | \
             awk "NR % $NUM_RUNNERS == $RUNNER_INDEX { print \"-p \" \$1 }" | \
             tee /tmp/fog-test-packages
+          # Hack: mc-fog-distribution needs bins from
+          # mc-util-{keyfile,generate-sample-ledger}.
+          # TODO: Replace with artifact deps when that does not require
+          # additional cargo flags.
+          grep -q fog-distribution /tmp/fog-test-packages && \
+            echo '-p mc-util-keyfile -p mc-util-generate-sample-ledger' >> /tmp/fog-test-packages || true
       - name: Run tests
         uses: ./.github/actions/run-mc-tests
         with:
