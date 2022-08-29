@@ -93,6 +93,8 @@ pub enum ViewEnclaveRequest {
     /// Complete the client connection to a Fog View store that accepted our
     /// client auth request. This is meant to be called after [ViewStoreInit].
     ViewStoreConnect(ResponderId, ClientAuthResponse),
+    /// Rollback nonces for stores which did not recieve our message
+    RollbackBackendNonces(Vec<ResponderId>),
     /// Collates shard query responses into a single query response for the
     /// client.
     CollateQueryResponses(
@@ -172,6 +174,9 @@ pub trait ViewEnclaveApi: ReportableEnclave {
         &self,
         client_query: EnclaveMessage<ClientSession>,
     ) -> Result<Vec<EnclaveMessage<ClientSession>>>;
+
+    /// Rollback backend nonces for stores which did not receive our message
+    fn rollback_backend_nonces(&self, responses_received: Vec<ResponderId>) -> Result<()>;
 
     /// Receives all of the shards' query responses and collates them into one
     /// query response for the client.

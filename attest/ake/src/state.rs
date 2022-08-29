@@ -83,6 +83,11 @@ where
     pub fn decrypt(&mut self, aad: &[u8], ciphertext: &[u8]) -> Result<Vec<u8>, CipherError> {
         self.reader.decrypt_with_ad(aad, ciphertext)
     }
+
+    pub fn decrement_writer_nonce(&mut self) {
+        let current_nonce = self.writer.get_nonce();
+        self.writer.set_nonce(current_nonce - 1)
+    }
 }
 
 impl<Cipher> State for Ready<Cipher> where Cipher: NoiseCipher {}

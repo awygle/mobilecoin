@@ -210,6 +210,14 @@ impl ViewEnclaveApi for SgxViewEnclave {
         mc_util_serial::deserialize(&outbuf[..])?
     }
 
+    fn rollback_backend_nonces(&self, responses_received: Vec<ResponderId>) -> Result<()> {
+        let inbuf = mc_util_serial::serialize(&ViewEnclaveRequest::RollbackBackendNonces(
+            responses_received,
+        ))?;
+        let outbuf = self.enclave_call(&inbuf)?;
+        mc_util_serial::deserialize(&outbuf[..])?
+    }
+
     fn collate_shard_query_responses(
         &self,
         client_query_request: EnclaveMessage<ClientSession>,

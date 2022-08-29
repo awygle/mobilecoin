@@ -160,6 +160,19 @@ where
         .await?;
     }
 
+    // we've gotten a reply from every *shard* (or timed out), now we need to roll
+    // back the nonces from the *stores* we didn't get a response from in order
+    // to keep the Noise channel in sync.
+    enclave
+        .rollback_backend_nonces(query_responses.clone().into_keys().collect())
+        .map_err(|err| {
+            router_server_err_to_rpc_status(
+                "Query: nonce rollback",
+                RouterServerError::Enclave(err),
+                logger.clone(),
+            )
+        })?;
+
     let query_response = enclave
         .collate_shard_query_responses(query.into(), query_responses)
         .map_err(|err| {

@@ -169,6 +169,10 @@ impl<Cipher: NoiseCipher> CipherState<Cipher> {
         // TODO: return current nonce? We don't provide any access otherwise...
     }
 
+    pub fn get_nonce(&mut self) -> u64 {
+        self.nonce
+    }
+
     /// The noise protocol `EncryptWithAd()` operation.
     ///
     /// Will return an error if the nonce would repeat, more than 2^56 bytes

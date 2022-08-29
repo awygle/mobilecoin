@@ -217,6 +217,10 @@ where
             .backend_connect(view_store_id, view_store_auth_response)?)
     }
 
+    fn rollback_backend_nonces(&self, responses_received: Vec<ResponderId>) -> Result<()> {
+        Ok(self.ake.rollback_backend_nonces(responses_received)?)
+    }
+
     fn collate_shard_query_responses(
         &self,
         client_query: EnclaveMessage<ClientSession>,

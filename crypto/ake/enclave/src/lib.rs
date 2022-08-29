@@ -198,6 +198,18 @@ impl<EI: EnclaveIdentity> AkeEnclaveState<EI> {
         Ok(client_auth_request_data.into())
     }
 
+    pub fn rollback_backend_nonces(&self, responses_received: Vec<ResponderId>) -> Result<()> {
+        let mut backends = self.backends.lock()?;
+
+        for (id, backend) in backends.iter_mut() {
+            if !responses_received.contains(id) {
+                backend.decrement_writer_nonce();
+            }
+        }
+
+        Ok(())
+    }
+
     /// Connect to an enclave backend as a client.
     ///
     /// This establishes the client to backend enclave connection, see
