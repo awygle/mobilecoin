@@ -217,7 +217,7 @@ impl LedgerEnclave for LedgerSgxEnclave {
             ledger_store_id,
             ledger_store_auth_response,
         ))?;
-      
+
         let outbuf = self.enclave_call(&inbuf)?;
         mc_util_serial::deserialize(&outbuf[..])?
     }
@@ -247,6 +247,19 @@ impl LedgerEnclave for LedgerSgxEnclave {
     }
 
     fn collate_shard_query_responses(
+        &self,
+        sealed_query: SealedClientMessage,
+        shard_query_responses: BTreeMap<ResponderId, EnclaveMessage<ClientSession>>,
+    ) -> Result<EnclaveMessage<ClientSession>> {
+        let inbuf = mc_util_serial::serialize(&EnclaveCall::CollateQueryResponses(
+            sealed_query,
+            shard_query_responses,
+        ))?;
+        let outbuf = self.enclave_call(&inbuf)?;
+        mc_util_serial::deserialize(&outbuf[..])?
+    }
+
+    fn handle_key_image_store_request(
         &self,
         sealed_query: SealedClientMessage,
         shard_query_responses: BTreeMap<ResponderId, EnclaveMessage<ClientSession>>,

@@ -111,7 +111,6 @@ pub enum EnclaveCall {
     /// Begin a connection to a Fog Ledger Store. The enclave calling this
     /// method, most likely a router, will act as a client to the Fog Ledger
     /// Store.
-  
     ConnectToKeyImageStore(ResponderId),
 
     /// The [LedgerEnclave::finish_connecting_to_store()] method.
@@ -140,5 +139,13 @@ pub enum EnclaveCall {
     CollateQueryResponses(
         SealedClientMessage,
         BTreeMap<ResponderId, EnclaveMessage<ClientSession>>,
-    )
+    ),
+
+    /// The [LedgerEnclave::handle_key_image_store_request()] method.
+    ///
+    /// Used by a Ledger Store to handle an inbound encrypted ledger.proto
+    /// LedgerRequest. Generally, these come in from a router.
+    /// This could could be a key image request, a merkele proof
+    /// request, and potentially in the future an untrusted tx out request.
+    HandleKeyImageStoreRequest(EnclaveMessage<ClientSession>),
 }

@@ -117,7 +117,10 @@ impl LedgerEnclave for MockEnclave {
     fn collate_shard_query_responses(
         &self,
         _sealed_query: mc_attest_enclave_api::SealedClientMessage,
-        _shard_query_responses: std::collections::BTreeMap<ResponderId, EnclaveMessage<ClientSession>>,
+        _shard_query_responses: std::collections::BTreeMap<
+            ResponderId,
+            EnclaveMessage<ClientSession>,
+        >,
     ) -> EnclaveResult<EnclaveMessage<ClientSession>> {
         unimplemented!()
     }

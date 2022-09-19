@@ -4,7 +4,7 @@ use clap::Parser;
 use grpcio::{RpcStatus, RpcStatusCode};
 use mc_common::{logger::log, time::SystemTimeProvider};
 use mc_fog_ledger_enclave::{LedgerSgxEnclave, ENCLAVE_FILE};
-use mc_fog_ledger_server::{LedgerStoreConfig, KeyImageStoreServer};
+use mc_fog_ledger_server::{KeyImageStoreServer, LedgerStoreConfig};
 use mc_ledger_db::LedgerDB;
 use mc_util_grpc::AdminServer;
 use mc_watcher::watcher_db::WatcherDB;
@@ -33,19 +33,19 @@ fn main() {
         logger.clone(),
     );
 
-    //Get our ledger connection started. 
+    //Get our ledger connection started.
     let db = LedgerDB::open(&config.ledger_db).expect("Could not read ledger DB");
     let watcher =
         WatcherDB::open_ro(&config.watcher_db, logger.clone()).expect("Could not open watcher DB");
 
-    let mut router_server =
-        KeyImageStoreServer::new(config.clone(), 
-            enclave, 
-            db, 
-            watcher, 
-            SystemTimeProvider::default(), 
-            logger.clone(),
-        );
+    let mut router_server = KeyImageStoreServer::new(
+        config.clone(),
+        enclave,
+        db,
+        watcher,
+        SystemTimeProvider::default(),
+        logger.clone(),
+    );
     router_server.start();
 
     //Initialize the admin api

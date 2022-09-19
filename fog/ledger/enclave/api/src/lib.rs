@@ -117,7 +117,7 @@ pub trait LedgerEnclave: ReportableEnclave {
         ledger_store_id: ResponderId,
         ledger_store_auth_response: ClientAuthResponse,
     ) -> Result<()>;
-  
+
     /// Decrypts a client query message and converts it into a
     /// SealedClientMessage which can be unsealed multiple times to
     /// construct the MultiKeyImageStoreRequest.
@@ -138,6 +138,16 @@ pub trait LedgerEnclave: ReportableEnclave {
     /// Receives all of the shards' query responses and collates them into one
     /// query response for the client.
     fn collate_shard_query_responses(
+        &self,
+        sealed_query: SealedClientMessage,
+        shard_query_responses: BTreeMap<ResponderId, EnclaveMessage<ClientSession>>,
+    ) -> Result<EnclaveMessage<ClientSession>>;
+
+    /// Used by a Ledger Store to handle an inbound encrypted ledger.proto
+    /// LedgerRequest. Generally, these come in from a router.
+    /// This could could be a key image request, a merkele proof
+    /// request, and potentially in the future an untrusted tx out request.
+    fn handle_key_image_store_request(
         &self,
         sealed_query: SealedClientMessage,
         shard_query_responses: BTreeMap<ResponderId, EnclaveMessage<ClientSession>>,
