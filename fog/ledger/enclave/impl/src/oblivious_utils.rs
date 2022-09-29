@@ -110,27 +110,151 @@ mod tests {
     extern crate std;
 
     use super::*;
+    use std::vec;
 
     #[test]
     fn should_overwrite_tests() {
-        // Images don't match
-        let client_result = KeyImageResult {
-            key_image: 123456u64.into(),
-            spent_at: 1,
-            timestamp: 123456,
-            timestamp_result_code: TimestampResultCode::TimestampFound as u32,
-            key_image_result_code: DEFAULT_KEY_IMAGE_SEARCH_RESULT_CODE as u32,
-        };
-        let shard_result = KeyImageResult {
-            key_image: 654321u64.into(),
-            spent_at: 1,
-            timestamp: 123456,
-            timestamp_result_code: TimestampResultCode::TimestampFound as u32,
-            key_image_result_code: KeyImageResultCode::Spent as u32,
-        };
-        let result: bool =
-            should_overwrite_key_image_search_result(&client_result, &shard_result).into();
-        assert!(!result);
+        let test_cases = vec![
+            // Images don't match
+            (
+                123456,
+                1,
+                123456,
+                TimestampResultCode::TimestampFound,
+                KeyImageResultCode::NotSpent,
+                654321,
+                1,
+                123456,
+                TimestampResultCode::TimestampFound,
+                KeyImageResultCode::Spent,
+                false,
+                "key images don't match, but overwritten anyway!",
+            ),
+            // Spent beats not spent
+            (
+                123456,
+                1,
+                u64::MAX,
+                TimestampResultCode::TimestampFound,
+                KeyImageResultCode::NotSpent,
+                123456,
+                1,
+                123456,
+                TimestampResultCode::TimestampFound,
+                KeyImageResultCode::Spent,
+                true,
+                "Shard key is spent but doesn't overwrite unspent client!",
+            ),
+            // Spent beats error
+            (
+                123456,
+                1,
+                123456,
+                TimestampResultCode::TimestampFound,
+                KeyImageResultCode::KeyImageError,
+                123456,
+                1,
+                123456,
+                TimestampResultCode::TimestampFound,
+                KeyImageResultCode::Spent,
+                true,
+                "Shard key is spent but doesn't overwrite error client!",
+            ),
+            // Error beats not spent
+            (
+                123456,
+                1,
+                123456,
+                TimestampResultCode::TimestampFound,
+                KeyImageResultCode::NotSpent,
+                123456,
+                1,
+                123456,
+                TimestampResultCode::TimestampFound,
+                KeyImageResultCode::KeyImageError,
+                true,
+                "Shard result is error but doesn't overwrite unspent client!",
+            ),
+            // Error doesn't beat spent
+            (
+                123456,
+                1,
+                123456,
+                TimestampResultCode::TimestampFound,
+                KeyImageResultCode::Spent,
+                123456,
+                1,
+                123456,
+                TimestampResultCode::TimestampFound,
+                KeyImageResultCode::KeyImageError,
+                false,
+                "Shard result is error but overwrites spent client!",
+            ),
+            // Unspent doesn't beat error
+            (
+                123456,
+                1,
+                123456,
+                TimestampResultCode::TimestampFound,
+                KeyImageResultCode::KeyImageError,
+                123456,
+                1,
+                123456,
+                TimestampResultCode::TimestampFound,
+                KeyImageResultCode::NotSpent,
+                false,
+                "Shard result is unspent but overwrites client error!",
+            ),
+            // Unspent doesn't beat spent
+            (
+                123456,
+                1,
+                123456,
+                TimestampResultCode::TimestampFound,
+                KeyImageResultCode::Spent,
+                123456,
+                1,
+                123456,
+                TimestampResultCode::TimestampFound,
+                KeyImageResultCode::NotSpent,
+                false,
+                "Shard result is unspent but overwrites spent client!",
+            ),
+        ];
+
+        for (
+            client_key_image,
+            client_spent_at,
+            client_timestamp,
+            client_timestamp_result_code,
+            client_key_image_result_code,
+            shard_key_image,
+            shard_spent_at,
+            shard_timestamp,
+            shard_timestamp_result_code,
+            shard_key_image_result_code,
+            expected_result,
+            panic_message,
+        ) in test_cases.into_iter()
+        {
+            let client_result = KeyImageResult {
+                key_image: client_key_image.into(),
+                spent_at: client_spent_at,
+                timestamp: client_timestamp,
+                timestamp_result_code: client_timestamp_result_code as u32,
+                key_image_result_code: client_key_image_result_code as u32,
+            };
+            let shard_result = KeyImageResult {
+                key_image: shard_key_image.into(),
+                spent_at: shard_spent_at,
+                timestamp: shard_timestamp,
+                timestamp_result_code: shard_timestamp_result_code as u32,
+                key_image_result_code: shard_key_image_result_code as u32,
+            };
+            let result: bool =
+                should_overwrite_key_image_search_result(&client_result, &shard_result).into();
+            assert_eq!(result, expected_result, "{}", panic_message);
+        }
     }
     /*
     #[test]
