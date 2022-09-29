@@ -256,153 +256,199 @@ mod tests {
             assert_eq!(result, expected_result, "{}", panic_message);
         }
     }
-    /*
-    #[test]
-    fn collate_shard_query_responses_shards_find_all_tx_outs() {
-        let client_search_keys: Vec<Vec<u8>> = (0..10).map(|num| vec![num; 10]).collect();
-        let shard_tx_out_search_results: Vec<TxOutSearchResult> = client_search_keys
-            .iter()
-            .map(|search_key| {
-                create_test_tx_out_search_result(
-                    search_key.clone(),
-                    0,
-                    CLIENT_CIPHERTEXT_LENGTH - 1,
-                    TxOutSearchResultCode::Found,
-                )
-            })
-            .collect();
 
-        let result = collate_shard_tx_out_search_results(
-            client_search_keys.clone(),
-            shard_tx_out_search_results,
-        )
-        .unwrap();
+    fn collate(
+        client_queries: Vec<KeyImageQuery>,
+        shard_key_image_search_results: Vec<KeyImageResult>,
+    ) -> Vec<KeyImageResult> {
+        let queries_count = client_queries.len();
+        let result =
+            collate_shard_key_image_search_results(client_queries, shard_key_image_search_results);
 
-        let all_tx_out_found = result.iter().all(|tx_out_search_result| {
-            tx_out_search_result.result_code == TxOutSearchResultCode::Found as u32
-        });
-        assert!(all_tx_out_found);
-
-        let result_client_search_keys: HashSet<Vec<u8>> = HashSet::from_iter(
-            result
-                .iter()
-                .map(|tx_out_search_result| tx_out_search_result.search_key.clone()),
-        );
+        let results_count = result.iter().count();
         assert_eq!(
-            result_client_search_keys,
-            HashSet::from_iter(client_search_keys)
+            results_count, queries_count,
+            "{}",
+            "results length does not match number of queries"
         );
+
+        result
     }
 
     #[test]
-    fn collate_shard_query_responses_shards_one_not_found() {
-        let client_search_keys: Vec<Vec<u8>> = (0..10).map(|num| vec![num; 10]).collect();
-        let shard_tx_out_search_results: Vec<TxOutSearchResult> = client_search_keys
-            .iter()
-            .enumerate()
-            .map(|(i, search_key)| {
-                let result_code = match i {
-                    0 => TxOutSearchResultCode::NotFound,
-                    _ => TxOutSearchResultCode::Found,
-                };
-                create_test_tx_out_search_result(
-                    search_key.clone(),
-                    0,
-                    CLIENT_CIPHERTEXT_LENGTH - 1,
-                    result_code,
-                )
-            })
-            .collect();
+    fn collation_tests() {
+        // All results available, no dupes
+        let client_queries = vec![KeyImageQuery {
+            key_image: 1.into(),
+            start_block: 0,
+        }];
 
-        let result = collate_shard_tx_out_search_results(
-            client_search_keys.clone(),
-            shard_tx_out_search_results,
-        )
-        .unwrap();
+        let shard_results = vec![KeyImageResult {
+            key_image: 1.into(),
+            spent_at: 1,
+            timestamp: 123,
+            timestamp_result_code: TimestampResultCode::TimestampFound as u32,
+            key_image_result_code: KeyImageResultCode::Spent as u32,
+        }];
 
-        let result_client_search_keys: HashSet<Vec<u8>> = HashSet::from_iter(
-            result
-                .iter()
-                .map(|tx_out_search_result| tx_out_search_result.search_key.clone()),
-        );
-        assert_eq!(
-            result_client_search_keys,
-            HashSet::from_iter(client_search_keys)
-        );
+        let result = collate(client_queries, shard_results);
 
-        let not_found_count = result
-            .iter()
-            .filter(|tx_out_search_result| {
-                tx_out_search_result.result_code == TxOutSearchResultCode::NotFound as u32
-            })
-            .count();
-        assert_eq!(not_found_count, 1);
-    }
-
-    #[test]
-    fn collate_shard_query_responses_ciphertext_is_client_ciphertext_length_panics() {
-        let client_search_keys: Vec<Vec<u8>> = (0..10).map(|num| vec![num; 10]).collect();
-        let shard_tx_out_search_results: Vec<TxOutSearchResult> = client_search_keys
-            .iter()
-            .map(|search_key| TxOutSearchResult {
-                search_key: search_key.clone(),
-                result_code: TxOutSearchResultCode::NotFound as u32,
-                ciphertext: vec![0u8; CLIENT_CIPHERTEXT_LENGTH],
-            })
-            .collect();
-
-        let result = std::panic::catch_unwind(|| {
-            collate_shard_tx_out_search_results(
-                client_search_keys.clone(),
-                shard_tx_out_search_results,
-            )
+        let all_images_found = result.iter().all(|key_image_result| {
+            key_image_result.key_image_result_code == KeyImageResultCode::Spent as u32
         });
 
-        assert!(result.is_err());
+        assert!(
+            all_images_found,
+            "{}",
+            "all images are present but some were not collated"
+        );
+
+        // All results available, one duplicate
+        let client_queries = vec![KeyImageQuery {
+            key_image: 1.into(),
+            start_block: 0,
+        }];
+
+        let shard_results = vec![
+            KeyImageResult {
+                key_image: 1.into(),
+                spent_at: 1,
+                timestamp: 123,
+                timestamp_result_code: TimestampResultCode::TimestampFound as u32,
+                key_image_result_code: KeyImageResultCode::Spent as u32,
+            },
+            KeyImageResult {
+                key_image: 1.into(),
+                spent_at: 1,
+                timestamp: 123,
+                timestamp_result_code: TimestampResultCode::TimestampFound as u32,
+                key_image_result_code: KeyImageResultCode::Spent as u32,
+            },
+        ];
+
+        let result = collate(client_queries, shard_results);
+
+        let all_images_found = result.iter().all(|key_image_result| {
+            key_image_result.key_image_result_code == KeyImageResultCode::Spent as u32
+        });
+
+        assert!(
+            all_images_found,
+            "{}",
+            "all images are present but some were not collated"
+        );
+
+        // All results available, one error
+        let client_queries = vec![KeyImageQuery {
+            key_image: 1.into(),
+            start_block: 0,
+        }];
+
+        let shard_results = vec![
+            KeyImageResult {
+                key_image: 1.into(),
+                spent_at: 1,
+                timestamp: 123,
+                timestamp_result_code: TimestampResultCode::TimestampFound as u32,
+                key_image_result_code: KeyImageResultCode::Spent as u32,
+            },
+            KeyImageResult {
+                key_image: 1.into(),
+                spent_at: 1,
+                timestamp: 123,
+                timestamp_result_code: TimestampResultCode::TimestampFound as u32,
+                key_image_result_code: KeyImageResultCode::KeyImageError as u32,
+            },
+        ];
+
+        let result = collate(client_queries, shard_results);
+
+        let all_images_found = result.iter().all(|key_image_result| {
+            key_image_result.key_image_result_code == KeyImageResultCode::Spent as u32
+        });
+
+        assert!(
+            all_images_found,
+            "{}",
+            "all images are present but some were not collated"
+        );
+
+        // No results available
+        let client_queries = vec![KeyImageQuery {
+            key_image: 1.into(),
+            start_block: 0,
+        }];
+
+        let shard_results = vec![];
+
+        let result = collate(client_queries, shard_results);
+
+        let all_images_found = result.iter().all(|key_image_result| {
+            key_image_result.key_image_result_code == KeyImageResultCode::Spent as u32
+        });
+
+        assert!(
+            !all_images_found,
+            "{}",
+            "all images show results but no result provided"
+        );
+
+        // Result is error
+        let client_queries = vec![KeyImageQuery {
+            key_image: 1.into(),
+            start_block: 0,
+        }];
+
+        let shard_results = vec![KeyImageResult {
+            key_image: 1.into(),
+            spent_at: 1,
+            timestamp: 123,
+            timestamp_result_code: TimestampResultCode::TimestampFound as u32,
+            key_image_result_code: KeyImageResultCode::KeyImageError as u32,
+        }];
+
+        let result = collate(client_queries, shard_results);
+
+        let all_images_error = result.iter().all(|key_image_result| {
+            key_image_result.key_image_result_code == KeyImageResultCode::KeyImageError as u32
+        });
+
+        assert!(
+            all_images_error,
+            "{}",
+            "an image reported no error despite an error result"
+        );
+
+        // Only some queries answered
+        let client_queries = vec![
+            KeyImageQuery {
+                key_image: 1.into(),
+                start_block: 0,
+            },
+            KeyImageQuery {
+                key_image: 2.into(),
+                start_block: 0,
+            },
+        ];
+
+        let shard_results = vec![KeyImageResult {
+            key_image: 1.into(),
+            spent_at: 1,
+            timestamp: 123,
+            timestamp_result_code: TimestampResultCode::TimestampFound as u32,
+            key_image_result_code: KeyImageResultCode::Spent as u32,
+        }];
+
+        let result = collate(client_queries, shard_results);
+
+        let all_images_found = result.iter().all(|key_image_result| {
+            key_image_result.key_image_result_code == KeyImageResultCode::Spent as u32
+        });
+
+        assert!(
+            !all_images_found,
+            "{}",
+            "all images show results but some had no result provided"
+        );
     }
-    #[test]
-    fn collate_shard_query_responses_different_ciphertext_lengths_returns_correct_client_ciphertexts(
-    ) {
-        let client_search_keys: Vec<Vec<u8>> = (0..3).map(|num| vec![num; 10]).collect();
-        let ciphertext_values = [28u8, 5u8, 128u8];
-        let shard_tx_out_search_results: Vec<TxOutSearchResult> = client_search_keys
-            .iter()
-            .enumerate()
-            .map(|(idx, search_key)| TxOutSearchResult {
-                search_key: search_key.clone(),
-                result_code: TxOutSearchResultCode::Found as u32,
-                ciphertext: vec![ciphertext_values[idx]; idx + 1],
-            })
-            .collect();
-
-        let results: Vec<TxOutSearchResult> =
-            collate_shard_tx_out_search_results(client_search_keys, shard_tx_out_search_results)
-                .unwrap()
-                .into_iter()
-                // Sort by ciphertext length (ascending) in order to know what each expected result
-                // should be.
-                .sorted_by(|a, b| Ord::cmp(&b.ciphertext[0], &a.ciphertext[0]))
-                .collect();
-
-        let mut expected_first_result = [0u8; CLIENT_CIPHERTEXT_LENGTH];
-        let expected_first_result_delta = (CLIENT_CIPHERTEXT_LENGTH - 1) as u8;
-        expected_first_result[0] = expected_first_result_delta;
-        expected_first_result[1] = ciphertext_values[0];
-        assert_eq!(results[0].ciphertext, expected_first_result);
-
-        let mut expected_second_result = [0u8; CLIENT_CIPHERTEXT_LENGTH];
-        let expected_second_result_delta = (CLIENT_CIPHERTEXT_LENGTH - 2) as u8;
-        expected_second_result[0] = expected_second_result_delta;
-        expected_second_result[1] = ciphertext_values[1];
-        expected_second_result[2] = ciphertext_values[1];
-        assert_eq!(results[1].ciphertext, expected_second_result);
-
-        let mut expected_third_result = [0u8; CLIENT_CIPHERTEXT_LENGTH];
-        let expected_third_result_delta = (CLIENT_CIPHERTEXT_LENGTH - 3) as u8;
-        expected_third_result[0] = expected_third_result_delta;
-        expected_third_result[1] = ciphertext_values[2];
-        expected_third_result[2] = ciphertext_values[2];
-        expected_third_result[3] = ciphertext_values[2];
-        assert_eq!(results[2].ciphertext, expected_third_result);
-    }*/
 }
