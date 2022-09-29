@@ -110,8 +110,6 @@ mod tests {
     extern crate std;
 
     use super::*;
-    use itertools::Itertools;
-    use std::collections::HashSet;
 
     #[test]
     fn should_overwrite_tests() {
@@ -130,10 +128,9 @@ mod tests {
             timestamp_result_code: TimestampResultCode::TimestampFound as u32,
             key_image_result_code: KeyImageResultCode::Spent as u32,
         };
-        assert!(!should_overwrite_key_image_search_result(
-            client_result,
-            shard_result
-        ));
+        let result: bool =
+            should_overwrite_key_image_search_result(&client_result, &shard_result).into();
+        assert!(!result);
     }
     /*
     #[test]
