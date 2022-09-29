@@ -22,6 +22,8 @@ pub enum Error {
     Conversion(ConversionError),
     /// grpcio error ({0}): {1}
     Grpc(FogLedgerUri, RetryError<grpcio::Error>),
+    /// URI conversion error: {0}
+    UriConversionError(UriConversionError),
 }
 
 impl From<ProtobufError> for Error {

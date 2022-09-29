@@ -3,7 +3,9 @@
 //! Functionality for mocking and testing components in the ledger server
 
 use mc_attest_core::{IasNonce, Quote, QuoteNonce, Report, TargetInfo, VerificationReport};
-use mc_attest_enclave_api::{ClientAuthRequest, ClientAuthResponse, ClientSession, EnclaveMessage};
+use mc_attest_enclave_api::{
+    ClientAuthRequest, ClientAuthResponse, ClientSession, EnclaveMessage, SealedClientMessage,
+};
 use mc_blockchain_types::{
     Block, BlockContents, BlockData, BlockIndex, BlockMetadata, BlockSignature,
 };
@@ -21,6 +23,8 @@ use mc_transaction_core::{
     tx::{TxOut, TxOutMembershipElement, TxOutMembershipProof},
     TokenId,
 };
+
+use std::collections::BTreeMap;
 
 #[derive(Default, Clone)]
 pub struct MockEnclave {}
@@ -103,18 +107,26 @@ impl LedgerEnclave for MockEnclave {
     fn decrypt_and_seal_query(
         &self,
         _client_query: EnclaveMessage<ClientSession>,
-    ) -> EnclaveResult<mc_attest_enclave_api::SealedClientMessage> {
+    ) -> EnclaveResult<SealedClientMessage> {
         unimplemented!()
     }
 
     fn create_multi_key_image_store_query_data(
         &self,
-        _sealed_query: mc_attest_enclave_api::SealedClientMessage,
+        _sealed_query: SealedClientMessage,
     ) -> EnclaveResult<Vec<EnclaveMessage<ClientSession>>> {
         unimplemented!()
     }
 
     fn collate_shard_query_responses(
+        &self,
+        _sealed_query: SealedClientMessage,
+        _shard_query_responses: BTreeMap<ResponderId, EnclaveMessage<ClientSession>>,
+    ) -> EnclaveResult<EnclaveMessage<ClientSession>> {
+        unimplemented!()
+    }
+
+    fn handle_key_image_store_request(
         &self,
         _sealed_query: mc_attest_enclave_api::SealedClientMessage,
         _shard_query_responses: std::collections::BTreeMap<
