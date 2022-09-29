@@ -37,6 +37,8 @@ use mc_oblivious_traits::ORAMStorageCreator;
 use mc_sgx_compat::sync::Mutex;
 use mc_sgx_report_cache_api::{ReportableEnclave, Result as ReportableEnclaveResult};
 
+mod oblivious_utils;
+
 /// In-enclave state associated to the ledger enclaves
 pub struct SgxLedgerEnclave<OSC>
 where
@@ -247,7 +249,7 @@ where
         let channel_id = sealed_query.channel_id.clone();
         let client_query_plaintext = self.ake.unseal(&sealed_query)?;
         // TODO this will (possibly?) be used when we implement obliviousness
-        let _client_query_request: CheckKeyImagesRequest =
+        let client_query_request: CheckKeyImagesRequest =
             mc_util_serial::decode(&client_query_plaintext).map_err(|e| {
                 log::error!(self.logger, "Could not decode client query request: {}", e);
                 Error::ProstDecode
@@ -292,16 +294,22 @@ where
         // security requirements. I'm not 100% sure what an oblivious approach
         // to this looks like, though. In general this kind of thing needs to be
         // talked about.
-        let results = shard_query_responses
+        let plaintext_results = shard_query_responses
             .into_iter()
             .flat_map(|query_response| query_response.results)
             .collect();
+
+        let oblivious_results = oblivious_utils::collate_shard_key_image_search_results(
+            client_query_request.queries,
+            plaintext_results,
+        );
+
         let max_block_version = max(latest_block_version, *MAX_BLOCK_VERSION);
 
         let client_query_response = CheckKeyImagesResponse {
             num_blocks,
             global_txo_count,
-            results,
+            results: oblivious_results,
             latest_block_version,
             max_block_version,
         };
